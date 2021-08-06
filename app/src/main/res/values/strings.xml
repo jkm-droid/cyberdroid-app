@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Cyberdroid</string>
+    <string name="cyberdroid_key">Cyberdroid Key</string>
+    <string name="fill_fields">*Please enter your unique cyberdroid key</string>
+    <string name="login">Login</string>
+    <string name="get_one">Don\'t have a cyberdroid key? Get one</string>
+</resources>
