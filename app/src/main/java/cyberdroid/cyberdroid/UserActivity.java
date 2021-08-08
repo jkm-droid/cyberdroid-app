@@ -169,7 +169,7 @@ public class UserActivity extends AppCompatActivity {
             public void run() {
                 try {
                     System.out.println("data to send: "+data);
-                    String response = MyHelper.connect_to_server(link, data);
+                    String response = MyHelper.connect_and_post(link, data);
                     Message message = new Message();
                     message.arg1 = 1;
                     message.obj = response;

