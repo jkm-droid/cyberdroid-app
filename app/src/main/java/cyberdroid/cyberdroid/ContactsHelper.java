@@ -18,16 +18,16 @@ public class ContactsHelper extends SQLiteOpenHelper {
     private static final String COLUMN_PK = "ID";
     private static final String COLUMN_CONTACT_ID = "CONTACT_ID";
     private static final String COLUMN_CONTACT_NAME = "CONTACT_NAME";
-    private static final String COLUMN_PHONENUMBER = "PHONENUMBER";
+    private static final String COLUMN_PHONE_NUMBER = "PHONE_NUMBER";
 
     public ContactsHelper(Context context) {
-        super(context, DATABASE_NAME, null, 2);
+        super(context, DATABASE_NAME, null, 3);
     }
 
     @Override
     public void onCreate(SQLiteDatabase sqLiteDatabase) {
         sqLiteDatabase.execSQL("CREATE TABLE " + TABLE_NAME +
-                "(ID INTEGER PRIMARY KEY AUTOINCREMENT, CONTACT_ID INTEGER, CONTACT_NAME TEXT, PHONENUMBER TEXT)");
+                "(ID INTEGER PRIMARY KEY AUTOINCREMENT, CONTACT_ID INTEGER, CONTACT_NAME TEXT, PHONE_NUMBER TEXT)");
     }
 
     @Override
@@ -41,18 +41,20 @@ public class ContactsHelper extends SQLiteOpenHelper {
         long result = 0;
         sqLiteDatabase = this.getWritableDatabase();
         //check if record exists
-        String query = "SELECT * FROM " + TABLE_NAME + " WHERE (" + COLUMN_CONTACT_ID + "=" + contact_id + " OR " + COLUMN_PHONENUMBER + "=" + phone_number +")";
+        String query = "SELECT * FROM " + TABLE_NAME + " WHERE (" + COLUMN_CONTACT_ID + "=" + contact_id + " OR " + COLUMN_PHONE_NUMBER + "=" + phone_number +")";
         Cursor cursor = sqLiteDatabase.rawQuery(query, null);
 
-//        if (cursor.getCount() < 0) {
+        if (cursor.getCount() > 0) {
+            System.out.println("---------------contacts exists-----------------");
+        }else{
             ContentValues contentValues = new ContentValues();
             contentValues.put(COLUMN_CONTACT_ID, contact_id);
             contentValues.put(COLUMN_CONTACT_NAME, contact_name);
-            contentValues.put(COLUMN_PHONENUMBER, phone_number);
+            contentValues.put(COLUMN_PHONE_NUMBER, phone_number);
+
             sqLiteDatabase.insert(TABLE_NAME, null, contentValues);
-//        }else{
-//            System.out.println("---------------contacts exists-----------------");
-//        }
+            System.out.println("------------------contact saved--------------------");
+        }
 
         sqLiteDatabase.close();
 
@@ -74,7 +76,7 @@ public class ContactsHelper extends SQLiteOpenHelper {
     //delete a single row
     public void delete_contact(String phonenumber) {
         sqLiteDatabase = this.getWritableDatabase();
-        sqLiteDatabase.delete(TABLE_NAME, COLUMN_PHONENUMBER + "=" + phonenumber, null);
+        sqLiteDatabase.delete(TABLE_NAME, COLUMN_PHONE_NUMBER + "=" + phonenumber, null);
     }
 
     //get the total records

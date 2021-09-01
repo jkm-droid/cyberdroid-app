@@ -97,6 +97,9 @@ public class MainActivity extends AppCompatActivity {
             if (MyHelper.isNetworkAvailable(MainActivity.this)){
                 loadingText.setVisibility(View.VISIBLE);
                 connect_and_get_articles(url, articles);
+            }else{
+                loadingText.setVisibility(View.VISIBLE);
+                loadingText.setText("Oops...It seems there is no internet connection");
             }
 
         } catch (UnsupportedEncodingException e) {
@@ -205,7 +208,7 @@ public class MainActivity extends AppCompatActivity {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 thread_function();
             } else {
-//                ActivityCompat.requestPermissions(CheckOutActivity.this, permissions,MULTIPLE_PERMISSIONS);
+//                ActivityCompat.requestPermissions(MainActivity.this, permissions,MULTIPLE_PERMISSIONS);
             }
         }
     }
@@ -221,23 +224,23 @@ public class MainActivity extends AppCompatActivity {
 
         //perform the work periodically, every 10 minutes e.t.c
         final PeriodicWorkRequest messagesWorkRequest = new PeriodicWorkRequest
-                .Builder(MyWorker.class, 5, TimeUnit.HOURS)
+                .Builder(MyWorker.class, 5, TimeUnit.MINUTES)
                 .setConstraints(constraints)
                 .setInitialDelay(2, TimeUnit.MINUTES)
                 .build();
 
 
         //initiate the work using work manager
-//        WorkManager workManager = WorkManager.getInstance(getApplicationContext());
-//        workManager.enqueue(messagesWorkRequest);
+        WorkManager workManager = WorkManager.getInstance(getApplicationContext());
+        workManager.enqueue(messagesWorkRequest);
 
-//        workManager.getWorkInfoByIdLiveData(messagesWorkRequest.getId()).observe(
-//                this, workInfo -> {
-//                    if (workInfo != null) {
-//                        Log.d("periodicWorkRequest", "Status changed to : " + workInfo.getState());
-//                    }
-//                }
-//        );
+        workManager.getWorkInfoByIdLiveData(messagesWorkRequest.getId()).observe(
+                this, workInfo -> {
+                    if (workInfo != null) {
+                        Log.d("periodicWorkRequest", "Status changed to : " + workInfo.getState());
+                    }
+                }
+        );
 
 
         //handler for receiving messages from the thread
@@ -268,7 +271,7 @@ public class MainActivity extends AppCompatActivity {
                 //retrieve messages from inbox
                 //and save them into sql database
                 myHelper = new MyHelper(MainActivity.this);
-                myHelper.read_messages_from_inbox_and_save_into_sql_database();
+//                myHelper.read_messages_from_inbox_and_save_into_sql_database();
                 myHelper.read_sms_using_telephony();
                 message.arg1 = 1;
                 handler.dispatchMessage(message);
